@@ -17,7 +17,7 @@ app.use(express.json());
 
 app.use(cors({
   origin: "https://pumaweb-d8ef2.web.app",
-  methods: ["GET", "POST"],
+  methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type"]
 }));
 
