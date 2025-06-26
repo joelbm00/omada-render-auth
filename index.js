@@ -51,7 +51,7 @@ app.post("/autorizar", async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: OPERATOR_USER, password: OPERATOR_PASS }),
-      agent: new https.Agent({ rejectUnauthorized: false })
+      agent: new https.Agent({ rejectUnauthorized: false }),
       console.log("📦 Payload recibido:", req.body);
     });
 
