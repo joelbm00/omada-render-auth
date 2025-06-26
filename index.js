@@ -52,9 +52,8 @@ app.post("/autorizar", async (req, res) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: OPERATOR_USER, password: OPERATOR_PASS }),
       agent: new https.Agent({ rejectUnauthorized: false }),
-      console.log("📦 Payload recibido:", req.body);
-    });
-
+     });
+     console.log("📦 Payload recibido:", req.body);
     if (!loginRes.ok) throw new Error("Login fallido");
 
     const csrfToken = loginRes.headers.get("x-csrf-token");
