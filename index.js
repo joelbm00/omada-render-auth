@@ -52,6 +52,7 @@ app.post("/autorizar", async (req, res) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: OPERATOR_USER, password: OPERATOR_PASS }),
       agent: new https.Agent({ rejectUnauthorized: false })
+      console.log("📦 Payload recibido:", req.body);
     });
 
     if (!loginRes.ok) throw new Error("Login fallido");
@@ -70,7 +71,11 @@ app.post("/autorizar", async (req, res) => {
       agent: new https.Agent({ rejectUnauthorized: false })
     });
 
-    if (!authRes.ok) throw new Error("Autorización fallida");
+    if (!authRes.ok) {
+  const errorText = await authRes.text();
+  throw new Error(`Autorización fallida: ${authRes.status} - ${errorText}`);
+}
+
 
     return res.status(200).json({ success: true, message: "Cliente autorizado" });
   } catch (err) {
