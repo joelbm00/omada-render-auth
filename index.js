@@ -7,7 +7,7 @@ const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 3000;
 
-const CONTROLLER = "https://b1a4-190-34-133-54.ngrok-free.app";
+const CONTROLLER = "b1a4-190-34-133-54.ngrok-free.app";
 const CONTROLLER_PORT = 443;
 const CONTROLLER_ID = "6657e53f19e72732099b4edd5ab1105b";
 const OPERATOR_USER = "guest-portal";
