@@ -7,10 +7,10 @@ const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 3000;
 
-const CONTROLLER = "192.168.200.1";
-const CONTROLLER_PORT = 8043;
+const CONTROLLER = "https://b1a4-190-34-133-54.ngrok-free.app";
+const CONTROLLER_PORT = 443;
 const CONTROLLER_ID = "6657e53f19e72732099b4edd5ab1105b";
-const OPERATOR_USER = "tplink";
+const OPERATOR_USER = "guest-portal";
 const OPERATOR_PASS = "Tplink!2027";
 
 app.use(express.json());
