@@ -79,6 +79,10 @@ console.log("🔥 Autorizando con:", {
       agent: new https.Agent({ rejectUnauthorized: false })
     });
 
+    const authText = await authRes.text();
+console.log("📨 Respuesta OC200:", authRes.status, authText);
+
+
     if (!authRes.ok) {
   const errorText = await authRes.text();
   throw new Error(`Autorización fallida: ${authRes.status} - ${errorText}`);
