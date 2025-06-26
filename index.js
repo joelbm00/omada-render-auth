@@ -58,6 +58,15 @@ app.post("/autorizar", async (req, res) => {
 
     const csrfToken = loginRes.headers.get("x-csrf-token");
     const cookies = loginRes.headers.get("set-cookie");
+console.log("🔥 Autorizando con:", {
+  csrfToken,
+  cookies,
+  clientMac,
+  clientIp,
+  gatewayMac,
+  vid,
+  redirectURL
+});
 
     const authRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}/${CONTROLLER_ID}/api/v2/hotspot/extPortal/auth`, {
       method: "POST",
