@@ -3,6 +3,21 @@ const express = require("express");
 const fetch = require("node-fetch");
 const https = require("https");
 const cors = require("cors");
+const dns = require("dns");
+
+function verificarDominioNgrok(host) {
+  return new Promise((resolve, reject) => {
+    dns.lookup(host, (err, address) => {
+      if (err) {
+        console.error(`🛑 No se pudo resolver ${host}:`, err.message);
+        return reject("El controlador no está disponible (ngrok inactivo o mal configurado).");
+      }
+      console.log(`🔍 Dominio resuelto: ${host} → ${address}`);
+      resolve(address);
+    });
+  });
+}
+
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -31,6 +46,7 @@ app.post("/autorizar", async (req, res) => {
   }
 
   try {
+    await verificarDominioNgrok(CONTROLLER);
     const loginRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}/${CONTROLLER_ID}/api/v2/hotspot/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
