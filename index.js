@@ -1,4 +1,3 @@
-// index.js
 const express = require("express");
 const fetch = require("node-fetch");
 const https = require("https");
@@ -17,7 +16,6 @@ function verificarDominioNgrok(host) {
     });
   });
 }
-
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -48,57 +46,65 @@ app.post("/autorizar", async (req, res) => {
   try {
     await verificarDominioNgrok(CONTROLLER);
 
-console.log("🔥 Autorizando con:", {
-  csrfToken,
-  cookies,
-  clientMac,
-  clientIp,
-  gatewayMac,
-  vid,
-  redirectURL
-});
-let csrfToken = null;
-let cookies = null;
-let loginSuccess = false;
+    let csrfToken = null;
+    let cookies = null;
+    let loginSuccess = false;
 
-const loginPaths = [
-  `/api/v2/hotspot/login`, // sin CONTROLLER_ID
-  `/${CONTROLLER_ID}/api/v2/hotspot/login` // con CONTROLLER_ID
-];
+    const loginPaths = [
+      `/api/v2/hotspot/login`,
+      `/${CONTROLLER_ID}/api/v2/hotspot/login`
+    ];
 
-for (const path of loginPaths) {
-  console.log(`🔁 Probando login en: https://${CONTROLLER}:${CONTROLLER_PORT}${path}`);
-  try {
-    const loginRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: OPERATOR_USER, password: OPERATOR_PASS }),
-      agent: new https.Agent({ rejectUnauthorized: false })
-    });
+    for (const path of loginPaths) {
+      console.log(`🔁 Probando login en: https://${CONTROLLER}:${CONTROLLER_PORT}${path}`);
+      try {
+        const loginRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}${path}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: OPERATOR_USER, password: OPERATOR_PASS }),
+          agent: new https.Agent({ rejectUnauthorized: false })
+        });
 
-    const preview = await loginRes.text();
-    console.log(`📨 Respuesta ${path}:`, loginRes.status, preview.slice(0, 100));
+        const preview = await loginRes.text();
+        console.log(`📨 Respuesta ${path}:`, loginRes.status, preview.slice(0, 100));
 
-    if (loginRes.ok) {
-      csrfToken = loginRes.headers.get("x-csrf-token");
-      cookies = loginRes.headers.get("set-cookie");
+        if (loginRes.ok) {
+          const retryRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}${path}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: OPERATOR_USER, password: OPERATOR_PASS }),
+            agent: new https.Agent({ rejectUnauthorized: false })
+          });
 
-      if (csrfToken && cookies) {
-        loginSuccess = true;
-        console.log("✅ Login exitoso con ruta:", path);
-        break;
-      } else {
-        console.warn("⚠️ Login respondió pero no devolvió CSRF token.");
+          csrfToken = retryRes.headers.get("x-csrf-token");
+          cookies = retryRes.headers.get("set-cookie");
+
+          if (csrfToken && cookies) {
+            loginSuccess = true;
+            console.log("✅ Login exitoso con ruta:", path);
+            break;
+          } else {
+            console.warn("⚠️ Login respondió pero sin CSRF token.");
+          }
+        }
+      } catch (err) {
+        console.error(`❌ Falló intento en ${path}:`, err.message);
       }
     }
-  } catch (err) {
-    console.error(`❌ Falló intento en ${path}:`, err.message);
-  }
-}
 
-if (!loginSuccess || !csrfToken) {
-  throw new Error("Login fallido o falta CSRF token. Verifica rutas o credenciales.");
-}
+    if (!loginSuccess || !csrfToken) {
+      throw new Error("Login fallido o falta CSRF token. Verifica rutas o credenciales.");
+    }
+
+    console.log("🔥 Autorizando con:", {
+      csrfToken,
+      cookies,
+      clientMac,
+      clientIp,
+      gatewayMac,
+      vid,
+      redirectURL
+    });
 
     const authRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}/${CONTROLLER_ID}/api/v2/hotspot/extPortal/auth`, {
       method: "POST",
@@ -112,14 +118,11 @@ if (!loginSuccess || !csrfToken) {
     });
 
     const authText = await authRes.text();
-console.log("📨 Respuesta OC200:", authRes.status, authText);
-
+    console.log("📨 Respuesta OC200:", authRes.status, authText.slice(0, 150));
 
     if (!authRes.ok) {
-  const errorText = await authRes.text();
-  throw new Error(`Autorización fallida: ${authRes.status} - ${errorText}`);
-}
-
+      throw new Error(`Autorización fallida: ${authRes.status} - ${authText}`);
+    }
 
     return res.status(200).json({ success: true, message: "Cliente autorizado" });
   } catch (err) {
