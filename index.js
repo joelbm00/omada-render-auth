@@ -46,8 +46,7 @@ app.post("/autorizar", async (req, res) => {
   try {
     await verificarDominioNgrok(CONTROLLER);
 
-    let csrfToken = null;
-    let cookies = null;
+    let authToken = null;
     let loginSuccess = false;
 
     const loginPaths = [
@@ -61,44 +60,32 @@ app.post("/autorizar", async (req, res) => {
         const loginRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}${path}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: OPERATOR_USER, password: OPERATOR_PASS }),
+          body: JSON.stringify({
+            name: OPERATOR_USER,
+            password: OPERATOR_PASS
+          }),
           agent: new https.Agent({ rejectUnauthorized: false })
         });
 
-        const preview = await loginRes.text();
-        console.log(`📨 Respuesta ${path}:`, loginRes.status, preview.slice(0, 100));
+        const data = await loginRes.json();
+        console.log(`📨 Respuesta ${path}:`, loginRes.status, data?.msg || data);
 
-        if (loginRes.ok) {
-          const retryRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}${path}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: OPERATOR_USER, password: OPERATOR_PASS }),
-            agent: new https.Agent({ rejectUnauthorized: false })
-          });
-
-          csrfToken = retryRes.headers.get("x-csrf-token");
-          cookies = retryRes.headers.get("set-cookie");
-
-          if (csrfToken && cookies) {
-            loginSuccess = true;
-            console.log("✅ Login exitoso con ruta:", path);
-            break;
-          } else {
-            console.warn("⚠️ Login respondió pero sin CSRF token.");
-          }
+        if (loginRes.ok && data?.result?.token) {
+          authToken = data.result.token;
+          loginSuccess = true;
+          console.log("✅ Login exitoso con ruta:", path);
+          break;
         }
       } catch (err) {
-        console.error(`❌ Falló intento en ${path}:`, err.message);
+        console.error(`❌ Falló login en ${path}:`, err.message);
       }
     }
 
-    if (!loginSuccess || !csrfToken) {
-      throw new Error("Login fallido o falta CSRF token. Verifica rutas o credenciales.");
+    if (!loginSuccess || !authToken) {
+      throw new Error("Login fallido o falta token. Verifica rutas o credenciales.");
     }
 
-    console.log("🔥 Autorizando con:", {
-      csrfToken,
-      cookies,
+    console.log("🔥 Autorizando cliente:", {
       clientMac,
       clientIp,
       gatewayMac,
@@ -110,15 +97,14 @@ app.post("/autorizar", async (req, res) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken,
-        "Cookie": cookies
+        "Authorization": `Bearer ${authToken}`
       },
       body: JSON.stringify({ clientMac, clientIp, gatewayMac, vid, redirectURL }),
       agent: new https.Agent({ rejectUnauthorized: false })
     });
 
     const authText = await authRes.text();
-    console.log("📨 Respuesta OC200:", authRes.status, authText.slice(0, 150));
+    console.log("📨 Respuesta OC200 (Auth):", authRes.status, authText.slice(0, 150));
 
     if (!authRes.ok) {
       throw new Error(`Autorización fallida: ${authRes.status} - ${authText}`);
