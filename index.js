@@ -47,6 +47,7 @@ app.post("/autorizar", async (req, res) => {
     await verificarDominioNgrok(CONTROLLER);
 
     let authToken = null;
+    let cookies = null;
     let loginSuccess = false;
 
     const loginPaths = [
@@ -68,6 +69,7 @@ app.post("/autorizar", async (req, res) => {
         });
 
         const data = await loginRes.json();
+        cookies = loginRes.headers.get("set-cookie");
         console.log(`📨 Respuesta ${path}:`, loginRes.status, data?.msg || data);
 
         if (loginRes.ok && data?.result?.token) {
@@ -88,33 +90,35 @@ app.post("/autorizar", async (req, res) => {
     const authURL = `https://${CONTROLLER}:${CONTROLLER_PORT}/${CONTROLLER_ID}/api/v2/hotspot/extPortal/auth`;
     const payload = { clientMac, clientIp, gatewayMac, vid, redirectURL };
 
-    console.log("🔥 Autorizando cliente con token:", authToken.slice(0, 8) + "...");
-    console.log("📦 Datos del cliente:", payload);
+    console.log("🔥 Autorizando cliente:", payload);
+    console.log("🔑 Usando token:", authToken.slice(0, 8) + "...");
+    if (cookies) console.log("🍪 Cookie de sesión detectada.");
 
     let authRes, authText, authType;
 
-    // Primer intento: Authorization header
+    // Primer intento: token como Bearer y cookie
     try {
       authRes = await fetch(authURL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
-          "Authorization": `Bearer ${authToken}`
+          "Authorization": `Bearer ${authToken}`,
+          ...(cookies ? { "Cookie": cookies } : {})
         },
         body: JSON.stringify(payload),
         agent: new https.Agent({ rejectUnauthorized: false })
       });
 
       authText = await authRes.text();
-      authType = authRes.headers.get("content-type") || "unknown";
+      authType = authRes.headers.get("content-type") || "desconocido";
       console.log("📨 Respuesta OC200 (Bearer):", authRes.status, "-", authType);
     } catch (err) {
       console.error("❌ Error en envío con Authorization:", err.message);
     }
 
-    // Si falló, reintentamos con token en el cuerpo
-    if (!authRes.ok || authType.includes("text/html")) {
+    // Si falló, reintentamos con token en el body
+    if (!authRes?.ok || authType.includes("text/html")) {
       console.log("🔁 Reintentando con token en el cuerpo...");
       const altPayload = { token: authToken, ...payload };
 
@@ -122,19 +126,20 @@ app.post("/autorizar", async (req, res) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json"
+          "Accept": "application/json",
+          ...(cookies ? { "Cookie": cookies } : {})
         },
         body: JSON.stringify(altPayload),
         agent: new https.Agent({ rejectUnauthorized: false })
       });
 
       authText = await authRes.text();
-      authType = authRes.headers.get("content-type") || "unknown";
-      console.log("📨 Respuesta OC200 (Token en cuerpo):", authRes.status, "-", authType);
+      authType = authRes.headers.get("content-type") || "desconocido";
+      console.log("📨 Respuesta OC200 (Token en body):", authRes.status, "-", authType);
     }
 
     if (!authRes.ok || authType.includes("text/html")) {
-      throw new Error(`Autorización fallida (${authRes.status}) o respuesta HTML inesperada.`);
+      throw new Error(`Autorización fallida (${authRes.status}) o respuesta HTML inesperada del OC200`);
     }
 
     console.log("✅ Cliente autorizado correctamente.");
