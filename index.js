@@ -46,7 +46,7 @@ const OPERATOR_PASS = "Tplink!2027";
 app.use(express.json());
 
 app.use(cors({
-  origin: "https://pumaweb-d8ef2.web.app",
+  origin: "*",
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type"]
 }));
