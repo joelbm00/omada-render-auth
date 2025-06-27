@@ -47,17 +47,7 @@ app.post("/autorizar", async (req, res) => {
 
   try {
     await verificarDominioNgrok(CONTROLLER);
-    const loginRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}/${CONTROLLER_ID}/api/v2/hotspot/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: OPERATOR_USER, password: OPERATOR_PASS }),
-      agent: new https.Agent({ rejectUnauthorized: false }),
-     });
-     console.log("📦 Payload recibido:", req.body);
-    if (!loginRes.ok) throw new Error("Login fallido");
 
-    const csrfToken = loginRes.headers.get("x-csrf-token");
-    const cookies = loginRes.headers.get("set-cookie");
 console.log("🔥 Autorizando con:", {
   csrfToken,
   cookies,
@@ -67,6 +57,48 @@ console.log("🔥 Autorizando con:", {
   vid,
   redirectURL
 });
+let csrfToken = null;
+let cookies = null;
+let loginSuccess = false;
+
+const loginPaths = [
+  `/api/v2/hotspot/login`, // sin CONTROLLER_ID
+  `/${CONTROLLER_ID}/api/v2/hotspot/login` // con CONTROLLER_ID
+];
+
+for (const path of loginPaths) {
+  console.log(`🔁 Probando login en: https://${CONTROLLER}:${CONTROLLER_PORT}${path}`);
+  try {
+    const loginRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: OPERATOR_USER, password: OPERATOR_PASS }),
+      agent: new https.Agent({ rejectUnauthorized: false })
+    });
+
+    const preview = await loginRes.text();
+    console.log(`📨 Respuesta ${path}:`, loginRes.status, preview.slice(0, 100));
+
+    if (loginRes.ok) {
+      csrfToken = loginRes.headers.get("x-csrf-token");
+      cookies = loginRes.headers.get("set-cookie");
+
+      if (csrfToken && cookies) {
+        loginSuccess = true;
+        console.log("✅ Login exitoso con ruta:", path);
+        break;
+      } else {
+        console.warn("⚠️ Login respondió pero no devolvió CSRF token.");
+      }
+    }
+  } catch (err) {
+    console.error(`❌ Falló intento en ${path}:`, err.message);
+  }
+}
+
+if (!loginSuccess || !csrfToken) {
+  throw new Error("Login fallido o falta CSRF token. Verifica rutas o credenciales.");
+}
 
     const authRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}/${CONTROLLER_ID}/api/v2/hotspot/extPortal/auth`, {
       method: "POST",
