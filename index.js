@@ -4,6 +4,23 @@ const https = require("https");
 const cors = require("cors");
 const dns = require("dns");
 
+// 🔐 Función para abortar si el OC200 no responde
+const fetchConTimeout = async (url, options, timeoutMs = 10000) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(id);
+    return res;
+  } catch (err) {
+    clearTimeout(id);
+    if (err.name === "AbortError") {
+      throw new Error("⏱️ Timeout: OC200 no respondió en 10 segundos");
+    }
+    throw err;
+  }
+};
+
 function verificarDominioNgrok(host) {
   return new Promise((resolve, reject) => {
     dns.lookup(host, (err, address) => {
@@ -58,7 +75,7 @@ app.post("/autorizar", async (req, res) => {
     for (const path of loginPaths) {
       console.log(`🔁 Probando login en: https://${CONTROLLER}:${CONTROLLER_PORT}${path}`);
       try {
-        const loginRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}${path}`, {
+        const loginRes = await fetchConTimeout(`https://${CONTROLLER}:${CONTROLLER_PORT}${path}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -98,7 +115,7 @@ app.post("/autorizar", async (req, res) => {
 
     // Primer intento: Authorization header
     try {
-      authRes = await fetch(authURL, {
+      authRes = await fetchConTimeout(authURL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -124,7 +141,7 @@ app.post("/autorizar", async (req, res) => {
 
       const altPayload = { token: authToken, ...payload };
 
-      authRes = await fetch(authURL, {
+      authRes = await fetchConTimeout(authURL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
