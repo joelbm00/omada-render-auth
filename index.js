@@ -85,32 +85,61 @@ app.post("/autorizar", async (req, res) => {
       throw new Error("Login fallido o falta token. Verifica rutas o credenciales.");
     }
 
-    console.log("🔥 Autorizando cliente:", {
-      clientMac,
-      clientIp,
-      gatewayMac,
-      vid,
-      redirectURL
-    });
+    const authURL = `https://${CONTROLLER}:${CONTROLLER_PORT}/${CONTROLLER_ID}/api/v2/hotspot/extPortal/auth`;
+    const payload = { clientMac, clientIp, gatewayMac, vid, redirectURL };
 
-    const authRes = await fetch(`https://${CONTROLLER}:${CONTROLLER_PORT}/${CONTROLLER_ID}/api/v2/hotspot/extPortal/auth`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${authToken}`
-      },
-      body: JSON.stringify({ clientMac, clientIp, gatewayMac, vid, redirectURL }),
-      agent: new https.Agent({ rejectUnauthorized: false })
-    });
+    console.log("🔥 Autorizando cliente con token:", authToken.slice(0, 8) + "...");
+    console.log("📦 Datos del cliente:", payload);
 
-    const authText = await authRes.text();
-    console.log("📨 Respuesta OC200 (Auth):", authRes.status, authText.slice(0, 150));
+    let authRes, authText, authType;
 
-    if (!authRes.ok) {
-      throw new Error(`Autorización fallida: ${authRes.status} - ${authText}`);
+    // Primer intento: Authorization header
+    try {
+      authRes = await fetch(authURL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${authToken}`
+        },
+        body: JSON.stringify(payload),
+        agent: new https.Agent({ rejectUnauthorized: false })
+      });
+
+      authText = await authRes.text();
+      authType = authRes.headers.get("content-type") || "unknown";
+      console.log("📨 Respuesta OC200 (Bearer):", authRes.status, "-", authType);
+    } catch (err) {
+      console.error("❌ Error en envío con Authorization:", err.message);
     }
 
-    return res.status(200).json({ success: true, message: "Cliente autorizado" });
+    // Si falló, reintentamos con token en el cuerpo
+    if (!authRes.ok || authType.includes("text/html")) {
+      console.log("🔁 Reintentando con token en el cuerpo...");
+      const altPayload = { token: authToken, ...payload };
+
+      authRes = await fetch(authURL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(altPayload),
+        agent: new https.Agent({ rejectUnauthorized: false })
+      });
+
+      authText = await authRes.text();
+      authType = authRes.headers.get("content-type") || "unknown";
+      console.log("📨 Respuesta OC200 (Token en cuerpo):", authRes.status, "-", authType);
+    }
+
+    if (!authRes.ok || authType.includes("text/html")) {
+      throw new Error(`Autorización fallida (${authRes.status}) o respuesta HTML inesperada.`);
+    }
+
+    console.log("✅ Cliente autorizado correctamente.");
+    return res.status(200).json({ success: true, message: "Cliente autorizado correctamente" });
+
   } catch (err) {
     console.error("❌ Error:", err.message);
     return res.status(500).json({ success: false, error: err.message });
