@@ -155,4 +155,5 @@ app.post("/autorizar", async (req, res) => {
 });
 
 app.listen(port, () => {
-  console
+  console.log(`✅ Servidor escuchando en puerto ${port}`);
+});
