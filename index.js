@@ -8,7 +8,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Configuración del controlador OC200
-const CONTROLLER = "b1a4-190-34-133-54.ngrok-free.app";
+const CONTROLLER = "dcbb-190-34-133-54.ngrok-free.app";
 const CONTROLLER_PORT = 443;
 const CONTROLLER_ID = "6657e53f19e72732099b4edd5ab1105b";
 const OPERATOR_USER = "guest-portal";
