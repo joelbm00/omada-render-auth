@@ -48,7 +48,7 @@ async function getAccessToken() {
 
 async function getSiteId() {
   const token = await getAccessToken();
-  const res = await fetch(`${OMADA_BASE_URL}/v2/sites`, {
+  const res = await fetch(`${OMADA_BASE_URL}/v1/sites`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   const data = await res.json();
