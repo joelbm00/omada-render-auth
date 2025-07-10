@@ -27,22 +27,21 @@ async function getAccessToken() {
     return accessToken;
   }
 
-const response = await fetch(`${OMADA_BASE_URL}/openapi/authorize/token?grant_type=client_credentials`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    omadacId: process.env.OMADAC_ID,
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET
-  })
-});
-
+  const response = await fetch(`${OMADA_BASE_URL}/openapi/authorize/token?grant_type=client_credentials`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      omadacId: OMADAC_ID,
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET
+    })
+  });
 
   if (!response.ok) throw new Error("❌ Error obteniendo token");
 
   const data = await response.json();
-  accessToken = data.access_token;
-  tokenExpiresAt = Date.now() + (data.expires_in - 30) * 1000;
+  accessToken = data.result.accessToken;
+  tokenExpiresAt = Date.now() + (data.result.expiresIn - 30) * 1000;
 
   return accessToken;
 }
@@ -79,20 +78,18 @@ app.post("/autorizar", async (req, res) => {
     }
 
     const isGatewayFlow = !!gatewayMac;
-
     const required = isGatewayFlow
       ? ["clientMac", "gatewayMac", "vid"]
       : ["clientMac", "apMac", "ssid"];
 
     const missing = required.filter(k => !req.body[k]);
-
     if (missing.length > 0) {
       return res.status(400).json({ error: "Parámetros faltantes", detalles: missing });
     }
 
     const token = await getAccessToken();
-    const siteId = await getSiteId();
     const authURL = `${OMADA_BASE_URL}/openapi/authorize/extPortal/auth`;
+
     const payload = isGatewayFlow
       ? {
           clientMac,
@@ -144,6 +141,7 @@ app.post("/autorizar", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 app.listen(PORT,() => {
    console.log(' Backend list en puerto $(PORT)');
