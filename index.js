@@ -27,15 +27,16 @@ async function getAccessToken() {
     return accessToken;
   }
 
-  const response = await fetch(`${OMADA_BASE_URL}/v2/oauth/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      grant_type: "client_credentials",
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET
-    })
-  });
+const response = await fetch(`${OMADA_BASE_URL}/openapi/authorize/token?grant_type=client_credentials`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    omadacId: process.env.OMADAC_ID,
+    client_id: CLIENT_ID,
+    client_secret: CLIENT_SECRET
+  })
+});
+
 
   if (!response.ok) throw new Error("❌ Error obteniendo token");
 
@@ -91,8 +92,7 @@ app.post("/autorizar", async (req, res) => {
 
     const token = await getAccessToken();
     const siteId = await getSiteId();
-    const authURL = `${OMADA_BASE_URL}/v2/sites/${siteId}/hotspot/extPortal/auth`;
-
+    const authURL = `${OMADA_BASE_URL}/openapi/authorize/extPortal/auth`;
     const payload = isGatewayFlow
       ? {
           clientMac,
