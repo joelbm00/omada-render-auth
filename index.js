@@ -10,8 +10,6 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
-
-const app = cors();
 app.use(cors()); // Sin restricciones
 
 const {
