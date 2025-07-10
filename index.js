@@ -20,6 +20,7 @@ app.get("/status", (req, res) => {
 const {
   CLIENT_ID,
   CLIENT_SECRET,
+  OMADAC_ID,
   OMADA_BASE_URL, // Ej: https://cloud.omada.com
   PORT = 3000
 } = process.env;
