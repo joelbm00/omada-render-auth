@@ -3,13 +3,15 @@
 import express from "express";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
+import cors from 'cors';
+
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 
-const cors = require("cors");
+const app = cors();
 app.use(cors()); // Sin restricciones
 
 const {
