@@ -12,6 +12,11 @@ const app = express();
 app.use(express.json());
 app.use(cors()); // Sin restricciones
 
+app.get("/status", (req, res) => {
+  res.json({ ok: true, timestamp: Date.now() });
+});
+
+
 const {
   CLIENT_ID,
   CLIENT_SECRET,
@@ -54,6 +59,7 @@ async function getSiteId() {
   const data = await res.json();
   return data?.data?.[0]?.siteId || process.env.DEFAULT_SITE_ID;
 }
+
 
 app.post("/autorizar", async (req, res) => {
   console.log("📥 Petición recibida en /autorizar");
