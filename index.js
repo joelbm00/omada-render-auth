@@ -56,37 +56,66 @@ async function getSiteId() {
 }
 
 app.post("/autorizar", async (req, res) => {
+  console.log("📥 Petición recibida en /autorizar");
+  console.log("🧾 Payload recibido:", req.body);
+
   try {
     const {
       clientMac,
+      gatewayMac,
       apMac,
       ssid,
       radioId = "1",
+      vid = "1",
       site = "Default",
       time = 3600000000,
       authType = "4",
       redirectURL
     } = req.body;
 
-    if (!clientMac || !apMac || !ssid) {
-      return res.status(400).json({ error: "Missing required parameters" });
+    if (!clientMac) {
+      return res.status(400).json({ error: "clientMac es requerido" });
+    }
+
+    const isGatewayFlow = !!gatewayMac;
+
+    const required = isGatewayFlow
+      ? ["clientMac", "gatewayMac", "vid"]
+      : ["clientMac", "apMac", "ssid"];
+
+    const missing = required.filter(k => !req.body[k]);
+
+    if (missing.length > 0) {
+      return res.status(400).json({ error: "Parámetros faltantes", detalles: missing });
     }
 
     const token = await getAccessToken();
     const siteId = await getSiteId();
-
     const authURL = `${OMADA_BASE_URL}/v2/sites/${siteId}/hotspot/extPortal/auth`;
 
-    const payload = {
-      clientMac,
-      apMac,
-      ssidName: ssid,
-      radioId,
-      siteName: site,
-      time,
-      authType,
-      redirectUrl: redirectURL
-    };
+    const payload = isGatewayFlow
+      ? {
+          clientMac,
+          gatewayMac,
+          vid,
+          siteName: site,
+          time,
+          authType,
+          redirectUrl: redirectURL
+        }
+      : {
+          clientMac,
+          apMac,
+          ssidName: ssid,
+          radioId,
+          siteName: site,
+          time,
+          authType,
+          redirectUrl: redirectURL
+        };
+
+    console.log(`🔎 Tipo de flujo: ${isGatewayFlow ? "Gateway" : "Access Point (EAP)"}`);
+    console.log("📤 Payload enviado:", payload);
 
     const response = await fetch(authURL, {
       method: "POST",
@@ -107,8 +136,8 @@ app.post("/autorizar", async (req, res) => {
       });
     }
 
-    console.log("✅ Autorizado correctamente:", result);
-    res.json({ status: "success", result });
+    console.log("✅ Cliente autorizado:", result);
+    res.json({ status: "success", flow: isGatewayFlow ? "gateway" : "ap", result });
 
   } catch (err) {
     console.error("🔥 Error general:", err.message);
@@ -116,6 +145,3 @@ app.post("/autorizar", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🌐 Backend listo en puerto ${PORT}`);
-});
