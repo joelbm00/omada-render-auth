@@ -115,7 +115,7 @@ app.post("/autorizar", async (req, res) => {
           clientMac,
           gatewayMac,
           vid,
-          siteId: site,
+          siteName: site,
           time,
           authType,
           redirectUrl: redirectURL
