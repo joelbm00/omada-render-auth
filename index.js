@@ -87,7 +87,7 @@ app.post("/autorizar", async (req, res) => {
       ssid,
       radioId = "1",
       vid = "1",
-      site = "Default",
+      site =  "6851b967231f024fbce6e649",
       time = 3600000000,
       authType = "4",
       redirectURL
@@ -115,7 +115,7 @@ app.post("/autorizar", async (req, res) => {
           clientMac,
           gatewayMac,
           vid,
-          siteName: site,
+          siteId: site,
           time,
           authType,
           redirectUrl: redirectURL
