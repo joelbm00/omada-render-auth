@@ -87,7 +87,7 @@ app.post("/autorizar", async (req, res) => {
       ssid,
       radioId = "1",
       vid = "1",
-      site =  "6851b967231f024fbce6e649",
+      site =  "6841cfa7f9b1f76de09ddfa5",
       time = 3600000000,
       authType = "4",
       redirectURL
