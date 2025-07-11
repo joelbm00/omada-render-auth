@@ -162,7 +162,6 @@ app.post("/autorizar", async (req, res) => {
 });
 
 // Activar el servidor
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🌐 Backend listo en puerto ${PORT}`);
 });
