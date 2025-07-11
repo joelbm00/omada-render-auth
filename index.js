@@ -12,10 +12,11 @@ app.use(cors());
 const {
   CLIENT_ID,
   CLIENT_SECRET,
-  OMADAC_ID,
   OMADA_BASE_URL,
   PORT = 3000
 } = process.env;
+
+const OMADAC_ID = "abba36f3748107717a36d14d8234bc41";
 
 let accessToken = null;
 let tokenExpiresAt = 0;
