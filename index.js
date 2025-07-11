@@ -1,67 +1,79 @@
-// server.js (o index.js)
-
 import express from "express";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
-import cors from 'cors';
-
+import cors from "cors";
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(cors()); // Sin restricciones
-
-app.get("/status", (req, res) => {
-  res.json({ ok: true, timestamp: Date.now() });
-});
-
+app.use(cors());
 
 const {
   CLIENT_ID,
   CLIENT_SECRET,
   OMADAC_ID,
-  OMADA_BASE_URL, // Ej: https://cloud.omada.com
+  OMADA_BASE_URL,
   PORT = 3000
 } = process.env;
 
 let accessToken = null;
 let tokenExpiresAt = 0;
 
+// Endpoint simple para validar conectividad
+app.get("/status", (req, res) => {
+  res.json({ ok: true, timestamp: Date.now() });
+});
+
+// Endpoint de depuración para ver estado de variables
+app.get("/debug-env", (req, res) => {
+  res.json({
+    OMADA_BASE_URL: OMADA_BASE_URL || "❌ no definida",
+    OMADAC_ID: OMADAC_ID || "❌ no definida",
+    CLIENT_ID: CLIENT_ID || "❌ no definida",
+    CLIENT_SECRET: CLIENT_SECRET ? "[OK]" : "❌ no definida"
+  });
+});
+
+// Obtener accessToken desde TP-Link
 async function getAccessToken() {
   if (accessToken && Date.now() < tokenExpiresAt) {
+    console.log("🔐 Usando token en caché");
     return accessToken;
   }
 
-  const response = await fetch(`${OMADA_BASE_URL}/openapi/authorize/token?grant_type=client_credentials`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      omadacId: OMADAC_ID,
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET
-    })
-  });
+  try {
+    console.log("🔐 Solicitando nuevo token...");
+    const tokenURL = `${OMADA_BASE_URL}/openapi/authorize/token?grant_type=client_credentials`;
 
-  if (!response.ok) throw new Error("❌ Error obteniendo token");
+    const response = await fetch(tokenURL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        omadacId: OMADAC_ID,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET
+      })
+    });
 
-  const data = await response.json();
-  accessToken = data.result.accessToken;
-  tokenExpiresAt = Date.now() + (data.result.expiresIn - 30) * 1000;
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Token falló (${response.status}): ${errorBody}`);
+    }
 
-  return accessToken;
+    const data = await response.json();
+    accessToken = data.result.accessToken;
+    tokenExpiresAt = Date.now() + (data.result.expiresIn - 30) * 1000;
+    console.log("✅ Token obtenido:", accessToken);
+
+    return accessToken;
+  } catch (err) {
+    console.error("🔥 Error obteniendo token:", err.message);
+    throw err;
+  }
 }
 
-async function getSiteId() {
-  const token = await getAccessToken();
-  const res = await fetch(`${OMADA_BASE_URL}/v1/sites`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  const data = await res.json();
-  return data?.data?.[0]?.siteId || process.env.DEFAULT_SITE_ID;
-}
-
-
+// Autorizar cliente desde gateway o access point
 app.post("/autorizar", async (req, res) => {
   console.log("📥 Petición recibida en /autorizar");
   console.log("🧾 Payload recibido:", req.body);
@@ -88,8 +100,8 @@ app.post("/autorizar", async (req, res) => {
     const required = isGatewayFlow
       ? ["clientMac", "gatewayMac", "vid"]
       : ["clientMac", "apMac", "ssid"];
-
     const missing = required.filter(k => !req.body[k]);
+
     if (missing.length > 0) {
       return res.status(400).json({ error: "Parámetros faltantes", detalles: missing });
     }
@@ -140,7 +152,7 @@ app.post("/autorizar", async (req, res) => {
       });
     }
 
-    console.log("✅ Cliente autorizado:", result);
+    console.log("✅ Cliente autorizado correctamente:", result);
     res.json({ status: "success", flow: isGatewayFlow ? "gateway" : "ap", result });
 
   } catch (err) {
@@ -149,7 +161,7 @@ app.post("/autorizar", async (req, res) => {
   }
 });
 
-
-app.listen(PORT,() => {
-   console.log(' Backend list en puerto $(PORT)');
+// Activar el servidor
+app.listen(PORT, () => {
+  console.log(`🌐 Backend listo en puerto ${PORT}`);
 });
