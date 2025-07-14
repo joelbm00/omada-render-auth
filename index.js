@@ -83,8 +83,6 @@ app.post("/autorizar", async (req, res) => {
     const {
       clientMac,
       gatewayMac,
-      apMac,
-      ssid,
       radioId = "1",
       vid = "25",
       site = "WiFiTestOFfice",
