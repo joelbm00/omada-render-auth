@@ -98,8 +98,7 @@ app.post("/autorizar", async (req, res) => {
     const isGatewayFlow = !!gatewayMac;
     const required = isGatewayFlow
       ? ["clientMac", "gatewayMac", "vid"]
-      : ["clientMac", "apMac", "ssid"];
-    const missing = required.filter(k => !req.body[k]);
+      const missing = required.filter(k => !req.body[k]);
 
     if (missing.length > 0) {
       return res.status(400).json({ error: "Parámetros faltantes", detalles: missing });
