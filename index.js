@@ -83,22 +83,16 @@ app.post("/autorizar", async (req, res) => {
     const {
       clientMac,
       gatewayMac,
-      radioId = "1",
       vid = "25",
-      site = "WiFiTestOFfice",
+      site = "WiFiTestOffice",
       time = 3600000000,
       authType = "4",
       redirectURL
     } = req.body;
 
-    if (!clientMac) {
-      return res.status(400).json({ error: "clientMac es requerido" });
-    }
-
-    const isGatewayFlow = !!gatewayMac;
-    const required = isGatewayFlow
-      ? ["clientMac", "gatewayMac", "vid"]
-      const missing = required.filter(k => !req.body[k]);
+    // Validación mínima obligatoria para Gateway
+    const required = ["clientMac", "gatewayMac", "vid"];
+    const missing = required.filter(k => !req.body[k]);
 
     if (missing.length > 0) {
       return res.status(400).json({ error: "Parámetros faltantes", detalles: missing });
@@ -107,19 +101,17 @@ app.post("/autorizar", async (req, res) => {
     const token = await getAccessToken();
     const authURL = `${OMADA_BASE_URL}/openapi/authorize/extPortal/auth`;
 
-    const payload = isGatewayFlow
-      ? {
-          clientMac,
-          gatewayMac,
-          vid,
-          site: site,
-          time,
-          authType,
-          redirectUrl: redirectURL
-        }
+    const payload = {
+      clientMac,
+      gatewayMac,
+      vid,
+      siteName: site,
+      time,
+      authType,
+      redirectUrl: redirectURL
+    };
 
-    console.log(`🔎 Tipo de flujo: ${isGatewayFlow ? "Gateway" : "Access Point (EAP)"}`);
-    console.log("📤 Payload enviado:", payload);
+    console.log("📤 Enviando payload gateway:", payload);
 
     const response = await fetch(authURL, {
       method: "POST",
@@ -140,14 +132,15 @@ app.post("/autorizar", async (req, res) => {
       });
     }
 
-    console.log("✅ Cliente autorizado correctamente:", result);
-    res.json({ status: "success", flow: isGatewayFlow ? "gateway" : "ap", result });
+    console.log("✅ Cliente autorizado vía Gateway:", result);
+    res.json({ status: "success", flow: "gateway", result });
 
   } catch (err) {
     console.error("🔥 Error general:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // Activar el servidor
 app.listen(PORT, () => {
