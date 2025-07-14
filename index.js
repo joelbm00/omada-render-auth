@@ -51,7 +51,7 @@ async function getAccessToken() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        omadacId: OMADAC_ID,
+        omadacId: abba36f3748107717a36d14d8234bc41,
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET
       })
