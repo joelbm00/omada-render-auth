@@ -86,8 +86,8 @@ app.post("/autorizar", async (req, res) => {
       apMac,
       ssid,
       radioId = "1",
-      vid = "1",
-      site = "6841cfa7f9b1f76de09ddafa5",
+      vid = "25",
+      site = "WiFiTestOFfice",
       time = 3600000000,
       authType = "4",
       redirectURL
@@ -115,7 +115,7 @@ app.post("/autorizar", async (req, res) => {
           clientMac,
           gatewayMac,
           vid,
-          siteName: site,
+          site: site,
           time,
           authType,
           redirectUrl: redirectURL
@@ -125,7 +125,7 @@ app.post("/autorizar", async (req, res) => {
           apMac,
           ssidName: ssid,
           radioId,
-          siteName: site,
+          site: site,
           time,
           authType,
           redirectUrl: redirectURL
