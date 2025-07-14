@@ -38,22 +38,26 @@ app.get("/debug-env", (req, res) => {
 
 // Obtener accessToken desde TP-Link
 async function getAccessToken() {
-  if (accessToken && Date.now() < tokenExpiresAt) {
-    console.log("🔐 Usando token en caché");
-    return accessToken;
-  }
+  let accessToken = null;
+  let tokenExpiresAt = 0;
+
+  // Evitamos caché para pruebas en caliente
+  console.log("🔐 Solicitando nuevo token...");
+  const OMADA_BASE_URL = "https://use1-omada-northbound.tplinkcloud.com";
+  const omadacId = "abba36f3748107717a36d14d8234bc41";
+  const client_id = "77498f4e4c05414197ffb2e484eb7d46";
+  const client_secret = "9031f6c75bea4c70ac0c46f6699bbc82";
+
+  const tokenURL = `${OMADA_BASE_URL}/openapi/authorize/token?grant_type=client_credentials`;
 
   try {
-    console.log("🔐 Solicitando nuevo token...");
-    const tokenURL = `${OMADA_BASE_URL}/openapi/authorize/token?grant_type=client_credentials`;
-
     const response = await fetch(tokenURL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        omadacId: "abba36f3748107717a36d14d8234bc41",
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET
+        omadacId,
+        client_id,
+        client_secret
       })
     });
 
@@ -65,14 +69,16 @@ async function getAccessToken() {
     const data = await response.json();
     accessToken = data.result.accessToken;
     tokenExpiresAt = Date.now() + (data.result.expiresIn - 30) * 1000;
-    console.log("✅ Token obtenido:", accessToken);
 
+    console.log("✅ Token obtenido:", accessToken);
     return accessToken;
+
   } catch (err) {
     console.error("🔥 Error obteniendo token:", err.message);
     throw err;
   }
 }
+
 
 // Autorizar cliente desde gateway o access point
 app.post("/autorizar", async (req, res) => {
