@@ -118,16 +118,6 @@ app.post("/autorizar", async (req, res) => {
           authType,
           redirectUrl: redirectURL
         }
-      : {
-          clientMac,
-          apMac,
-          ssidName: ssid,
-          radioId,
-          site: site,
-          time,
-          authType,
-          redirectUrl: redirectURL
-        };
 
     console.log(`🔎 Tipo de flujo: ${isGatewayFlow ? "Gateway" : "Access Point (EAP)"}`);
     console.log("📤 Payload enviado:", payload);
